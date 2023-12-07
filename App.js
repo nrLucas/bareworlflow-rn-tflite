@@ -1,5 +1,6 @@
+import React from "react";
+import { StyleSheet, Text, View, SafeAreaView, Button, Image } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
 import * as tf from "@tensorflow/tfjs";
 import { bundleResourceIO, decodeJpeg } from "@tensorflow/tfjs-react-native";
 import * as FileSystem from "expo-file-system";
@@ -22,11 +23,11 @@ const loadModel = async () => {
 const transformImageToTensor = async (uri) => {
     //.ts: const transformImageToTensor = async (uri:string):Promise<tf.Tensor>=>{
     //read the image as base64
-    const img64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-    });
-    const imgBuffer = tf.util.encodeString(img64, "base64").buffer;
-    const raw = new Uint8Array(imgBuffer);
+    // const img64 = await FileSystem.readAsStringAsync(uri, {
+    //     encoding: FileSystem.EncodingType.Base64,
+    // });
+    // const imgBuffer = tf.util.encodeString(img64, "base64").buffer;
+    const raw = new Uint8Array(uri);
     let imgTensor = decodeJpeg(raw);
     const scalar = tf.scalar(255);
     //resize the image
@@ -57,10 +58,47 @@ export const getPredictions = async (image) => {
 };
 
 export default function App() {
-    const [pickedImage, setPickedImage] = useState(false);
-    const cameraRef = useRef();
+    const [pickedImage, setPickedImage] = React.useState(false);
+    const [loading, setLoading] = React.useState(true);
+    const [hasCameraPermission, setHasCameraPermission] = React.useState();
+    const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = React.useState();
+    const [photo, setPhoto] = React.useState();
+    const [result, setResult] = React.useState("");
 
-    const takePic = async () => {
+    const cameraRef = React.useRef();
+
+    React.useEffect(() => {
+        (async () => {
+            const cameraPermission = await Camera.requestCameraPermissionsAsync();
+            const mediaLibraryPermission = await MediaLibrary.requestPermissionsAsync();
+            setHasCameraPermission(cameraPermission.status === "granted");
+            setHasMediaLibraryPermission(mediaLibraryPermission.status === "granted");
+        })();
+    }, []);
+
+    React.useEffect(() => {
+        if (!!photo) {
+            console.log("photo ========>", photo.uri);
+            console.log("============================");
+            setLoading(true);
+            setResult("");
+            const result = getPredictions(photo.base64);
+
+            if (!!result) {
+                console.log("result", result);
+                setResult(result);
+                setLoading(false);
+            }
+        }
+    }, [photo]);
+
+    if (hasCameraPermission === undefined) {
+        return <Text>Requesting permissions...</Text>;
+    } else if (!hasCameraPermission) {
+        return <Text>Permission for camera not granted. Please change this in settings.</Text>;
+    }
+
+    const takePick = async () => {
         let options = {
             quality: 1,
             base64: true,
@@ -70,6 +108,18 @@ export default function App() {
         let newPhoto = await cameraRef.current.takePictureAsync(options);
         setPhoto(newPhoto);
     };
+
+    if (photo) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <Image style={styles.preview} source={{ uri: "data:image/jpg;base64," + photo.base64 }} />
+
+                {loading ? <Text>Carregando...</Text> : result !== "" ? <Text>{result}</Text> : <Text>Modelo pronto!</Text>}
+
+                <Button title="Voltar" onPress={() => setPhoto(undefined)} />
+            </SafeAreaView>
+        );
+    }
 
     return (
         <Camera style={styles.container} ref={cameraRef}>
@@ -105,7 +155,7 @@ export default function App() {
                         }}
                     >
                         {/* <Button title="Galeria" onPress={pickImage} /> */}
-                        <Button title="Tirar Foto" onPress={takePic()} />
+                        <Button title="Tirar Foto" onPress={() => takePick()} />
                     </View>
                 </View>
 
@@ -134,4 +184,3 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 });
-
