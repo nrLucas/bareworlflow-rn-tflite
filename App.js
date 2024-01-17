@@ -29,7 +29,7 @@ const loadModel = async () => {
     const modelWeights3 = require("./assets/layers/group1-shard3of4.bin");
     const modelWeights4 = require("./assets/layers/group1-shard4of4.bin");
 
-    if (modelJSON && modelWeights) {
+    if (modelJSON && modelWeights1 && modelWeights2 && modelWeights3 && modelWeights4) {
         console.log("Carregados");
 
         try {
