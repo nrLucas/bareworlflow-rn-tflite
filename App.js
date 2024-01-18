@@ -1,4 +1,5 @@
 import React from "react";
+import "react-native-reanimated";
 import { StyleSheet, Text, View, SafeAreaView, Button, Image } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as tf from "@tensorflow/tfjs";
@@ -9,16 +10,7 @@ import * as MediaLibrary from "expo-media-library";
 
 import { Camera } from "expo-camera";
 
-const modelJSON = require("./assets/model.json");
-const modelWeights = require("./assets/group1_shard1.bin");
-
-const loadModel = async () => {
-    //.ts: const loadModel = async ():Promise<void|tf.LayersModel>=>{
-    const model = await tf.loadLayersModel(bundleResourceIO(modelJSON, modelWeights)).catch((e) => {
-        console.log("[LOADING ERROR] info:", e);
-    });
-    return model;
-};
+import { useTensorflowModel } from "react-native-fast-tflite";
 
 const transformImageToTensor = async (uri) => {
     //.ts: const transformImageToTensor = async (uri:string):Promise<tf.Tensor>=>{
@@ -49,14 +41,6 @@ const makePredictions = async (batch, model, imagesTensor) => {
     return pred;
 };
 
-export const getPredictions = async (image) => {
-    await tf.ready();
-    const model = await loadModel();
-    const tensor_image = await transformImageToTensor(image);
-    const predictions = await makePredictions(1, model, tensor_image);
-    return predictions;
-};
-
 export default function App() {
     const [pickedImage, setPickedImage] = React.useState(false);
     const [loading, setLoading] = React.useState(true);
@@ -65,7 +49,33 @@ export default function App() {
     const [photo, setPhoto] = React.useState();
     const [result, setResult] = React.useState("");
 
+    const [model, setModel] = React.useState("");
+
     const cameraRef = React.useRef();
+
+    const modelAux = useTensorflowModel(require("./assets/model.tflite"));
+
+    const getPredictions = async (image) => {
+        if (model) {
+            await tf.ready();
+            const tensor_image = await transformImageToTensor(image);
+            const predictions = await makePredictions(1, model, tensor_image);
+            return predictions;
+        }
+    };
+
+    React.useEffect(() => {
+        if (modelAux.model != null) {
+            setModel(modelAux.model);
+        }
+
+        // console.log(`Running Model...`);
+        // const r = model.model.run([new Uint8Array([5])]);
+        // r.then((output) => {
+        //     console.log(`Successfully ran Model!`, output);
+        //     setResult(`${output[0]}${output[1]}${output[2]}...`);
+        // });
+    }, [modelAux.model]);
 
     React.useEffect(() => {
         (async () => {

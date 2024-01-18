@@ -5,12 +5,6 @@ const { getDefaultConfig } = require("expo/metro-config");
 const config = getDefaultConfig(__dirname);
 
 // Adicionando ou atualizando as extensões de arquivo
-config.resolver.assetExts = [
-  ...(config.resolver.assetExts || []),
-  "bin",
-  "png",
-  "jpg",
-  "txt",
-];
+config.resolver.assetExts = [...(config.resolver.assetExts || []), "tflite", "bin", "png", "jpg", "txt"];
 
 module.exports = config;
